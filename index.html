@@ -63,7 +63,7 @@ td.n,th.n{text-align:right;} .tablewrap{max-height:360px;overflow:auto;}
 </div>
 <div class="panel"><h3>Movimientos <span id="tblCount" style="color:var(--mut);font-weight:400;font-size:13px;"></span></h3>
  <div class="tablewrap"><table id="tbl"><thead><tr>
-   <th data-k="y">Año</th><th data-k="m">Mes</th><th data-k="d">Día</th><th data-k="desc">Descripción</th><th class="n" data-k="amt">Monto</th><th data-k="ag">Agente 2</th><th data-k="src">Fuente</th>
+   <th data-k="fkey">Fecha</th><th data-k="desc">Descripción</th><th class="n" data-k="amt">Monto</th><th data-k="ag">Agente 2</th><th data-k="src">Fuente</th>
  </tr></thead><tbody></tbody></table></div>
 </div>
 <div class="sub" style="margin-top:14px;">Total 2026: <b>$118,717</b> · Money Pro (base $90,382) + negocio adicional ($28,335), sin duplicar. Hecho para Marco.</div>
@@ -80,7 +80,7 @@ const MES_BTNS=['Todos'].concat(MONTHS.map(function(m){return MES[m];}));
 const YEARS=Array.from(new Set(DATA.map(function(d){return String(d.y);}))).sort();
 const ANIO_BTNS=['Todos'].concat(YEARS);
 const GRAND=DATA.reduce(function(a,d){return a+d.amt;},0);
-let fAg='Todos',fSrc='Todos',fMes='Todos',fAnio='Todos',sortK='amt',sortDir=-1;
+let fAg='Todos',fSrc='Todos',fMes='Todos',fAnio='Todos',sortK='fkey',sortDir=-1;
 function fmt(n){return '$'+Math.round(n).toLocaleString('en-US');}
 function filtered(){return DATA.filter(function(d){return (fAg==='Todos'||d.ag===fAg)&&(fSrc==='Todos'||d.src===fSrc)&&(fMes==='Todos'||MES[d.m]===fMes)&&(fAnio==='Todos'||String(d.y)===fAnio);});}
 const barLabels={afterDatasetsDraw:function(c){const x=c.ctx;const m=c.getDatasetMeta(0);m.data.forEach(function(b,i){const v=c.data.datasets[0].data[i];if(!v)return;x.save();x.fillStyle='#2B3548';x.font='bold 11px Segoe UI';x.textAlign='center';x.fillText(fmt(v),b.x,b.y-6);x.restore();});}};
@@ -93,7 +93,7 @@ function mkMes(cv,f){
  const byM={};MONTHS.forEach(function(m){byM[m]=0;});f.forEach(function(d){byM[d.m]=(byM[d.m]||0)+d.amt;});
  const mLabels=MONTHS.map(function(m){return MES[m];}),mData=MONTHS.map(function(m){return Math.round(byM[m]);});
  const accent=fAg==='Todos'?'#7A5EA6':COL[fAg];
- return new Chart(cv,{type:'bar',data:{labels:mLabels,datasets:[{data:mData,backgroundColor:accent,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return fmt(c.raw);}}}},scales:{y:{ticks:{callback:function(v){return '$'+(v/1000)+'k';}}}}},plugins:[barLabels]});
+ return new Chart(cv,{type:'bar',data:{labels:mLabels,datasets:[{data:mData,backgroundColor:accent,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return fmt(c.raw);}}}},scales:{y:{ticks:{callback:function(v){return '$'+(v/1000)+'k';}}}},onClick:function(e,el){if(!el.length)return;var lab=mLabels[el[0].index];clearTimeout(clickTimer);clickTimer=setTimeout(function(){fMes=(fMes===lab?'Todos':lab);render();},250);}},plugins:[barLabels]});
 }
 function mkAg(cv){
  const g=DATA.filter(function(d){return (fSrc==='Todos'||d.src===fSrc)&&(fMes==='Todos'||MES[d.m]===fMes)&&(fAnio==='Todos'||String(d.y)===fAnio);});
@@ -115,14 +115,14 @@ function render(){
  if(chAg)chAg.destroy();chAg=mkAg(document.getElementById('chAg'));
  if(bigWhich){if(chBig)chBig.destroy();chBig=(bigWhich==='mes')?mkMes(document.getElementById('chBig'),f):mkAg(document.getElementById('chBig'));}
  const tb=document.querySelector('#tbl tbody');tb.innerHTML='';
- const sorted=f.slice().sort(function(a,b){let x=a[sortK],y=b[sortK];if(typeof x==='string'){return sortDir*x.localeCompare(y);}return sortDir*(x-y);});
+ const sorted=f.slice().sort(function(a,b){if(sortK==='fkey'){return sortDir*((a.y*10000+a.m*100+a.d)-(b.y*10000+b.m*100+b.d));}let x=a[sortK],y=b[sortK];if(typeof x==='string'){return sortDir*x.localeCompare(y);}return sortDir*(x-y);});
  document.getElementById('tblCount').textContent='('+f.length+' · '+fmt(tot)+')';
  sorted.forEach(function(d){const tr=document.createElement('tr');
-   tr.innerHTML='<td>'+d.y+'</td><td>'+MES[d.m]+'</td><td>'+d.d+'</td><td>'+d.desc+'</td><td class="n">'+fmt(d.amt)+'</td>'+
+   tr.innerHTML='<td style="white-space:nowrap">'+d.d+' '+MES[d.m]+' '+d.y+'</td><td>'+d.desc+'</td><td class="n">'+fmt(d.amt)+'</td>'+
    '<td><span class="pill" style="background:'+COL[d.ag]+'">'+d.ag+'</span></td><td class="src">'+d.src+'</td>';
    tb.appendChild(tr);});
 }
-document.querySelectorAll('#tbl th').forEach(function(th){th.onclick=function(){const k=th.dataset.k;if(sortK===k)sortDir*=-1;else{sortK=k;sortDir=(k==='amt'?-1:1);}render();};});
+document.querySelectorAll('#tbl th').forEach(function(th){th.onclick=function(){const k=th.dataset.k;if(sortK===k)sortDir*=-1;else{sortK=k;sortDir=(k==='amt'||k==='fkey'?-1:1);}render();};});
 render();
 
 var ovEl=document.getElementById('ov');
