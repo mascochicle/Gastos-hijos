@@ -47,6 +47,11 @@ td.n,th.n{text-align:right;} .tablewrap{max-height:360px;overflow:auto;}
 .apor b{font-size:17px;font-weight:800;}
 .apor .neto{margin-left:auto;color:#5C6470;font-size:13px;}
 .apor .neto b{color:#2B3548;font-size:15px;}
+/* Flecha del orden por `aria-sort` (17-ago-2026): se podia ordenar pero no se veia por
+   cual columna, asi que habia que adivinar como quedo. */
+th[data-k]{cursor:pointer;user-select:none;}
+th[aria-sort]::after{content:" B2";font-size:9px;color:var(--accent);}
+th[aria-sort=descending]::after{content:" BC";}
 </style></head>
 <body><div class="wrap">
 <h1>Tablero — Gasto en Hijos</h1>
@@ -169,7 +174,13 @@ function render(){
    '<td><span class="pill" style="background:'+COL[d.ag]+'">'+d.ag+'</span></td><td class="src">'+d.src+'</td>';
    tb.appendChild(tr);});
 }
-document.querySelectorAll('#tbl th').forEach(function(th){th.onclick=function(){const k=th.dataset.k;if(sortK===k)sortDir*=-1;else{sortK=k;sortDir=(k==='amt'||k==='fkey'?-1:1);}render();};});
+function marcaOrden(k,dir){
+ document.querySelectorAll("th[data-k]").forEach(function(th){
+  if(String(th.dataset.k)===String(k)) th.setAttribute("aria-sort", dir<0?"descending":"ascending");
+  else th.removeAttribute("aria-sort"); });
+}
+document.querySelectorAll('#tbl th').forEach(function(th){th.onclick=function(){const k=th.dataset.k;if(sortK===k)sortDir*=-1;else{sortK=k;sortDir=(k==='amt'||k==='fkey'?-1:1);}render();marcaOrden(sortK,sortDir);};});
+marcaOrden(sortK,sortDir);
 render();
 
 var ovEl=document.getElementById('ov');
